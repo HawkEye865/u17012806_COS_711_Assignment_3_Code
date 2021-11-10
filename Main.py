@@ -102,82 +102,44 @@ y_test = numpy.array(y_testtmp)
 y_train = to_categorical(y_train)
 y_test = to_categorical(y_test)
 
-timestamp = time.time()
-dt_object = datetime.fromtimestamp(timestamp)
-timestring1 = str(dt_object)[:19]
-timestring1 = timestring1.replace(":", "-")
-timestring1 = timestring1.replace(" ", "_")
-
 results = open("results.txt", "a")
-results.write("Run-----Train-----TrainError-----Test-----Time\n")
+results.write("Train-----TrainError-----Test-----Time\n")
 
-trainacuracies = []
-trainlosses = []
-testacuracies = []
-times = []
+#create model
+start = time.time()
+model = Sequential()
+#add model layers
+model.add(Conv2D(64, kernel_size=3, activation='relu', input_shape=(imgsize,imgsize,3)))
+model.add(Conv2D(32, kernel_size=3, activation='relu'))
+model.add(MaxPooling2D())
+model.add(Conv2D(32, kernel_size=3, activation='relu'))
+model.add(MaxPooling2D())
+model.add(Flatten())
+model.add(Dense(3, activation='softmax'))
 
-run = 1
-while run <= 10: 
-    #create model
-    start = time.time()
-    model = Sequential()
-    #add model layers
-    model.add(Conv2D(64, kernel_size=3, activation='relu', input_shape=(imgsize,imgsize,3)))
-    model.add(Conv2D(32, kernel_size=3, activation='relu'))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(32, kernel_size=3, activation='relu'))
-    model.add(MaxPooling2D())
-    model.add(Flatten())
-    model.add(Dense(3, activation='softmax'))
+#compile model using accuracy to measure model performance
+model.compile(optimizer=tf.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999,epsilon=1e-07,amsgrad=False,name='Adam'), loss='categorical_crossentropy', metrics=['accuracy'])
 
-    #compile model using accuracy to measure model performance
-    model.compile(optimizer=tf.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999,epsilon=1e-07,amsgrad=False,name='Adam'), loss='categorical_crossentropy', metrics=['accuracy'])
+# #train the model
+history = model.fit(X_train, y_train, epochs=60)
+end = time.time()
+elapsedTime = end - start
+elapsedTime = elapsedTime/60
 
-    # #train the model
-    print("=====================================================================")
-    print(run)
-    print("=====================================================================")
-    history = model.fit(X_train, y_train, epochs=60)
-    end = time.time()
-    elapsedTime = end - start
-    elapsedTime = elapsedTime/60
-    print("=====================================================================")
-    print(elapsedTime)
-    print("=====================================================================")
-    times.append(elapsedTime)
+out = model.predict(X_test[:1000])
+outstr = []
+tarstr = []
 
-    out = model.predict(X_test[:1000])
-    outstr = []
-    tarstr = []
+for x in out:
+    outstr.append(str(round(x[0])) + str(round(x[1])) + str(round(x[2])))
+for x in y_test:
+    tarstr.append(str(round(x[0])) + str(round(x[1])) + str(round(x[2])))
 
-    for x in out:
-        outstr.append(str(round(x[0])) + str(round(x[1])) + str(round(x[2])))
-    for x in y_test:
-        tarstr.append(str(round(x[0])) + str(round(x[1])) + str(round(x[2])))
+correct = 0
+for i in range(len(outstr)):
+    if outstr[i] == tarstr[i]:
+        correct += 1
 
-    correct = 0
-    for i in range(len(outstr)):
-        if outstr[i] == tarstr[i]:
-            correct += 1
-
-    accuracy2 = correct/len(out)*100
-    testacuracies.append(accuracy2)
-
-    trainacuracies.append(history.history['accuracy'][-1]*100)
-    trainlosses.append(history.history['loss'][-1])
-    results.write(str(run) + "-----" + str(history.history['accuracy'][-1]*100) + "-----" + str(history.history['loss'][-1]) + "-----" + str(accuracy2) + "-----" + str(elapsedTime)+"\n")
-    run += 1
-results.write("===============================================================================================================================================================================================\n")
-results.write("AverageTrain-----StandardDeviationTrain-----AverageTrainError-----StandardTrainDeviationError-----AverageTest-----StandardDeviationTest-----AverageTime\n")
-
-averageTrain = stats.mean(trainacuracies)
-averageTrainError = stats.mean(trainlosses)
-averageTest = stats.mean(testacuracies)
-averageTime = stats.mean(times)
-
-sdTrain = stats.stdev(trainacuracies)
-sdTrainError = stats.stdev(trainlosses)
-sdTest = stats.stdev(testacuracies)
-
-results.write(str(averageTrain)+"-----"+str(sdTrain)+"-----"+str(averageTrainError)+"-----"+str(sdTrainError)+"-----"+str(averageTest)+"-----"+str(sdTest)+"-----"+str(averageTime)+"\n")
+accuracy2 = correct/len(out)*100
+results.write(str(history.history['accuracy'][-1]*100) + "-----" + str(history.history['loss'][-1]) + "-----" + str(accuracy2) + "-----" + str(elapsedTime)+"\n")
 results.close() 
